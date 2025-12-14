@@ -1,0 +1,69 @@
+# .github/workflows/main.yml
+name: C Addition Project CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # --- 1. Build Stage ---
+      - name: Install Dependencies
+        run: sudo apt-get install -y build-essential
+
+      - name: Compile Code (Build)
+        run: make build
+        # This command creates the 'test_runner' executable
+
+      # --- 2. Test Stage ---
+      - name: Run Unit Tests
+        run: make test
+        # This command executes the 'test_runner'
+
+      # --- 3. Upload Artifact Stage (Build Once) ---
+      - name: Upload Test Runner Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: addition-test-runner
+          path: test_runner
+          # We upload the executable so it can be reused later.
+
+  deploy_simulation:
+    needs: build_and_test # This job only runs if build_and_test is successful
+    runs-on: ubuntu-latest
+    environment: Production # Optional: Use an environment for better tracking
+
+    steps:
+      - name: Download Test Runner Artifact (Deploy Many)
+        uses: actions/download-artifact@v4
+        with:
+          name: addition-test-runner
+          path: .
+          # The executable is downloaded to be used for deployment/verification
+
+      - name: Make Artifact Executable
+        run: chmod +x test_runner
+        # Ensure the downloaded artifact has execute permissions
+
+      - name: Verify Artifact (Optional Check)
+        run: |
+          echo "Running downloaded artifact for final verification..."
+          ./test_runner
+        # Running the artifact proves the 'build once, deploy many' concept
+
+      # --- 4. Simulated Deploy Stage ---
+      - name: Simulated Deployment using API Key
+        run: |
+          echo "Starting simulated deployment..."
+          echo "Sending deployment request with API Key: ${{ secrets.DEPLOY_API_KEY }}"
+          echo "Deployment successful."
+        # GitHub automatically masks the secret value in the log output (******)
